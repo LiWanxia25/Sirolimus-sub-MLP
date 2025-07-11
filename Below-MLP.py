@@ -110,6 +110,3 @@ if submitted:
                 shap.plots.waterfall(explanation)
                 plt.tight_layout()
                 st.pyplot(fig)
-                
-            else:
-                except ValueError(f"意外的SHAP值形状: {shap_values.shape}")

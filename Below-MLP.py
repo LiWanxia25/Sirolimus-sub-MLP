@@ -91,18 +91,14 @@ if submitted:
         original_feature_values = pd.DataFrame(features, columns=feature_names)
         
         # 调试输出
-        st.write(f"SHAP值形状: {np.array(shap_values).shape}")
-        st.write(f"期望值: {explainer_shap.expected_value}")
+        #st.write(f"SHAP值形状: {np.array(shap_values).shape}")
+        #st.write(f"期望值: {explainer_shap.expected_value}")
         
         try:
             # 处理SHAP值结构 - 针对(1,5,2)形状
             if len(shap_values.shape) == 3:  # 确认是3D数组
-                if predicted_class == 1:
-                    shap_values_single = shap_values[0, :, 1]  # 取第一个样本的正类SHAP值
-                    expected_value = explainer_shap.expected_value[1]
-                else:
-                    shap_values_single = shap_values[0, :, 0]  # 取第一个样本的负类SHAP值
-                    expected_value = explainer_shap.expected_value[0]
+                shap_values_single = shap_values[0, :, 1]  # 取第一个样本的正类SHAP值
+                expected_value = explainer_shap.expected_value[1]
                 
                 # 确保形状正确
                 assert len(shap_values_single) == len(feature_names), "SHAP值与特征数量不匹配"

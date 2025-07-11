@@ -99,21 +99,27 @@ if submitted:
             st.error("SHAP values could not be calculated. Please check the model and input data.")
         else:
             # 如果模型返回多个类别的SHAP值（例如分类模型），取相应类别的SHAP值
-            if isinstance(shap_values, list):
-                shap_values_class = shap_values[0]  # 选择第一个类别的SHAP值
+            if isinstance(shap_values, list) and len(shap_values) == 2:
+                shap_values_class = shap_values[1] 
+                expected_value = explainer_shap.expected_value[1] if isinstance(explainer_shap.expected_value, list) else explainer_shap.expected_value
             else:
                 shap_values_class = shap_values
+                expected_value = explainer_shap.expected_value
+
+            # 确保我们只处理单个样本的解释
+            if len(np.array(shap_values_class).shape) > 1:
+                shap_values_class = shap_values_class[0]  # 取第一个样本
    
-      # 将标准化前的原始数据存储在变量中
-        original_feature_values = pd.DataFrame(features, columns=feature_names)
-        # 创建瀑布图
-        fig, ax = plt.subplots()
-        shap.plots.waterfall(shap.Explanation(values=shap_values_class[0], 
-                                               base_values=explainer_shap.expected_value,
-                                               data=original_feature_values.iloc[0],
-                                               feature_names=original_feature_values.columns.tolist()))
-            
-        # 调整图表显示
-        plt.tight_layout()
-        st.pyplot(fig)
+            # 将标准化前的原始数据存储在变量中
+            original_feature_values = pd.DataFrame(features, columns=feature_names)
+            # 创建瀑布图
+            fig, ax = plt.subplots()
+            shap.plots.waterfall(shap.Explanation(values=shap_values_class, 
+                                                   base_values= expected_value,
+                                                   data=original_feature_values.iloc[0],
+                                                   feature_names=original_feature_values.columns.tolist()))
+                
+            # 调整图表显示
+            plt.tight_layout()
+            st.pyplot(fig)
 

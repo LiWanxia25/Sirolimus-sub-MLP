@@ -88,30 +88,70 @@ if submitted:
 
         
         # 创建SHAP解释器
-        ###explainer_shap = shap.KernelExplainer(model)
-        ###explainer_shap = shap.KernelExplainer(model.predict_proba, trainx)
-
+        explainer_shap = shap.KernelExplainer(model.predict_proba, trainx)
+        
         # 获取SHAP值
-        shap_values = explainer_shap.shap_values(pd.DataFrame(final_features_df,columns=feature_names))
-
-
+        shap_values = explainer_shap.shap_values(pd.DataFrame(final_features_df, columns=feature_names))
         
-        # 选择当前样本（假设第0个样本）和预测类别的SHAP值
-        sample_idx = 0  # 你要解释的样本索引
-        if predicted_class == 1:
-            shap_values_single = shap_values[sample_idx, :, 1]  # (n_features,)
-            expected_value = explainer_shap.expected_value[1]
+        # 调试输出SHAP值结构
+        st.write(f"SHAP值类型: {type(shap_values)}")
+        if isinstance(shap_values, list):
+            st.write(f"SHAP值列表长度: {len(shap_values)}")
+            for i, sv in enumerate(shap_values):
+                st.write(f"类别{i}的SHAP值形状: {np.array(sv).shape}")
         else:
-            shap_values_single = shap_values[sample_idx, :, 0]  # (n_features,)
-            expected_value = explainer_shap.expected_value[0]
+            st.write(f"SHAP值形状: {np.array(shap_values).shape}")
         
-        # 画瀑布图
-        shap.plots.waterfall(shap.Explanation(
-            values=shap_values_single,  # 确保是 (n_features,) 而不是 (n_features, n_classes)
-            base_values=expected_value,
-            data=original_feature_values.iloc[sample_idx],
-            feature_names=original_feature_values.columns.tolist()
-        ))
-        plt.tight_layout()
-        st.pyplot(plt.gcf())  # 直接显示，不需要保存图片
+        # 将标准化前的原始数据存储在变量中
+        original_feature_values = pd.DataFrame(features, columns=feature_names)  # 这里使用原始输入值
+        
+        # 处理SHAP值结构
+        try:
+            if isinstance(shap_values, list):
+                # 二分类模型返回列表情况
+                if predicted_class == 1:
+                    shap_values_single = shap_values[1][0]  # 取正类的第一个样本
+                    expected_value = explainer_shap.expected_value[1]
+                else:
+                    shap_values_single = shap_values[0][0]  # 取负类的第一个样本
+                    expected_value = explainer_shap.expected_value[0]
+            else:
+                # 非列表情况，直接处理
+                if len(shap_values.shape) == 2:  # 形状为(5,2)的情况
+                    if predicted_class == 1:
+                        shap_values_single = shap_values[:, 1]  # 取正类的SHAP值
+                    else:
+                        shap_values_single = shap_values[:, 0]  # 取负类的SHAP值
+                    expected_value = explainer_shap.expected_value[predicted_class]
+                else:
+                    shap_values_single = shap_values[0]  # 默认取第一个样本
+                    expected_value = explainer_shap.expected_value
+            
+            # 创建瀑布图
+            fig, ax = plt.subplots()
+            shap.plots.waterfall(shap.Explanation(
+                values=shap_values_single,
+                base_values=expected_value,
+                data=original_feature_values.iloc[0],
+                feature_names=original_feature_values.columns.tolist()
+            ))
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+        except Exception as e:
+            st.error(f"生成SHAP解释图时出错: {str(e)}")
+            st.write("尝试使用force plot替代...")
+            # 回退到force plot
+            if predicted_class == 1:        
+                shap.force_plot(explainer_shap.expected_value[1], 
+                               shap_values[1][0], 
+                               original_feature_values.iloc[0],
+                               matplotlib=True)    
+            else:        
+                shap.force_plot(explainer_shap.expected_value[0], 
+                               shap_values[0][0], 
+                               original_feature_values.iloc[0],
+                               matplotlib=True)
+            plt.tight_layout()
+            st.pyplot(plt.gcf())
 

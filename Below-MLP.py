@@ -110,3 +110,10 @@ if submitted:
                 shap.plots.waterfall(explanation)
                 plt.tight_layout()
                 st.pyplot(fig)
+
+            else:
+                    raise ValueError(f"意外的SHAP值形状: {shap_values.shape}")
+
+        except Exception as e:
+            st.error(f"生成瀑布图时出错: {str(e)}")
+            st.write("尝试使用条形图替代...")

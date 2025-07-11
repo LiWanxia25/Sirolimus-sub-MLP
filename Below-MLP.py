@@ -74,7 +74,7 @@ if submitted:
 
         # 创建SHAP解释器
         ###explainer_shap = shap.KernelExplainer(model)
-        explainer_shap = shap.KernelExplainer(model.predict_proba, xtrain)
+        explainer_shap = shap.KernelExplainer(model.predict_proba, trainx)
 
         # 获取SHAP值
         shap_values = explainer_shap.shap_values(pd.DataFrame(final_features_df,columns=feature_names))

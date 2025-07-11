@@ -74,84 +74,43 @@ if submitted:
 
 
         # 创建SHAP解释器
-        # 假设 X_train 是用于训练模型的特征数据
-        df=pd.read_csv('Below_训练集_5变量.csv',encoding='utf8')
-        trainy=df.Below
-        x_train=df.drop('Below',axis=1)
-        from sklearn.preprocessing import StandardScaler
-        continuous_cols = ['BMI', 'WBC', 'MCH', 'TG', 'TBIL']
-        trainx = x_train.copy()
-        scaler = StandardScaler()
-        trainx[continuous_cols] = scaler.fit_transform(x_train[continuous_cols])
-    
-        explainer_shap = shap.KernelExplainer(model.predict_proba, trainx)
-
-        
-        # 创建SHAP解释器
         explainer_shap = shap.KernelExplainer(model.predict_proba, trainx)
         
         # 获取SHAP值
         shap_values = explainer_shap.shap_values(pd.DataFrame(final_features_df, columns=feature_names))
         
-        # 调试输出SHAP值结构
-        st.write(f"SHAP值类型: {type(shap_values)}")
-        if isinstance(shap_values, list):
-            st.write(f"SHAP值列表长度: {len(shap_values)}")
-            for i, sv in enumerate(shap_values):
-                st.write(f"类别{i}的SHAP值形状: {np.array(sv).shape}")
-        else:
-            st.write(f"SHAP值形状: {np.array(shap_values).shape}")
-        
         # 将标准化前的原始数据存储在变量中
-        original_feature_values = pd.DataFrame(features, columns=feature_names)  # 这里使用原始输入值
+        original_feature_values = pd.DataFrame(features, columns=feature_names)
         
-        # 处理SHAP值结构
+        # 调试输出
+        st.write(f"SHAP值形状: {np.array(shap_values).shape}")
+        st.write(f"期望值: {explainer_shap.expected_value}")
+        
         try:
-            if isinstance(shap_values, list):
-                # 二分类模型返回列表情况
+            # 处理SHAP值结构 - 针对(1,5,2)形状
+            if len(shap_values.shape) == 3:  # 确认是3D数组
                 if predicted_class == 1:
-                    shap_values_single = shap_values[1][0]  # 取正类的第一个样本
+                    shap_values_single = shap_values[0, :, 1]  # 取第一个样本的正类SHAP值
                     expected_value = explainer_shap.expected_value[1]
                 else:
-                    shap_values_single = shap_values[0][0]  # 取负类的第一个样本
+                    shap_values_single = shap_values[0, :, 0]  # 取第一个样本的负类SHAP值
                     expected_value = explainer_shap.expected_value[0]
+                
+                # 确保形状正确
+                assert len(shap_values_single) == len(feature_names), "SHAP值与特征数量不匹配"
+                
+                # 创建瀑布图
+                fig, ax = plt.subplots()
+                explanation = shap.Explanation(
+                    values=shap_values_single,
+                    base_values=expected_value,
+                    data=original_feature_values.iloc[0],
+                    feature_names=feature_names
+                )
+                shap.plots.waterfall(explanation)
+                plt.tight_layout()
+                st.pyplot(fig)
+                
             else:
-                # 非列表情况，直接处理
-                if len(shap_values.shape) == 2:  # 形状为(5,2)的情况
-                    if predicted_class == 1:
-                        shap_values_single = shap_values[:, 1]  # 取正类的SHAP值
-                    else:
-                        shap_values_single = shap_values[:, 0]  # 取负类的SHAP值
-                    expected_value = explainer_shap.expected_value[predicted_class]
-                else:
-                    shap_values_single = shap_values[0]  # 默认取第一个样本
-                    expected_value = explainer_shap.expected_value
-            
-            # 创建瀑布图
-            fig, ax = plt.subplots()
-            shap.plots.waterfall(shap.Explanation(
-                values=shap_values_single,
-                base_values=expected_value,
-                data=original_feature_values.iloc[0],
-                feature_names=original_feature_values.columns.tolist()
-            ))
-            plt.tight_layout()
-            st.pyplot(fig)
-            
-        except Exception as e:
-            st.error(f"生成SHAP解释图时出错: {str(e)}")
-            st.write("尝试使用force plot替代...")
-            # 回退到force plot
-            if predicted_class == 1:        
-                shap.force_plot(explainer_shap.expected_value[1], 
-                               shap_values[1][0], 
-                               original_feature_values.iloc[0],
-                               matplotlib=True)    
-            else:        
-                shap.force_plot(explainer_shap.expected_value[0], 
-                               shap_values[0][0], 
-                               original_feature_values.iloc[0],
-                               matplotlib=True)
-            plt.tight_layout()
-            st.pyplot(plt.gcf())
+                raise ValueError(f"意外的SHAP值形状: {shap_values.shape}")
 

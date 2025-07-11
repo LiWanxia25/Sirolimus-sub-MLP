@@ -94,32 +94,24 @@ if submitted:
         # 获取SHAP值
         shap_values = explainer_shap.shap_values(pd.DataFrame(final_features_df,columns=feature_names))
 
-        # 确保获取到的shap_values不是None或空值
-        if shap_values is None:
-            st.error("SHAP values could not be calculated. Please check the model and input data.")
-        else:
-            # 如果模型返回多个类别的SHAP值（例如分类模型），取相应类别的SHAP值
-            if isinstance(shap_values, list) and len(shap_values) == 2:
-                shap_values_class = shap_values[1] 
-                expected_value = explainer_shap.expected_value[1] if isinstance(explainer_shap.expected_value, list) else explainer_shap.expected_value
-            else:
-                shap_values_class = shap_values
-                expected_value = explainer_shap.expected_value
 
-            # 确保我们只处理单个样本的解释
-            if len(np.array(shap_values_class).shape) > 1:
-                shap_values_class = shap_values_class[0]  # 取第一个样本
-   
-            # 将标准化前的原始数据存储在变量中
-            original_feature_values = pd.DataFrame(features, columns=feature_names)
-            # 创建瀑布图
-            fig, ax = plt.subplots()
-            shap.plots.waterfall(shap.Explanation(values=shap_values_class, 
-                                                   base_values= expected_value,
-                                                   data=original_feature_values.iloc[0],
-                                                   feature_names=original_feature_values.columns.tolist()))
-                
-            # 调整图表显示
-            plt.tight_layout()
-            st.pyplot(fig)
+        
+        # 选择当前样本（假设第0个样本）和预测类别的SHAP值
+        sample_idx = 0  # 你要解释的样本索引
+        if predicted_class == 1:
+            shap_values_single = shap_values[sample_idx, :, 1]  # (n_features,)
+            expected_value = explainer_shap.expected_value[1]
+        else:
+            shap_values_single = shap_values[sample_idx, :, 0]  # (n_features,)
+            expected_value = explainer_shap.expected_value[0]
+        
+        # 画瀑布图
+        shap.plots.waterfall(shap.Explanation(
+            values=shap_values_single,  # 确保是 (n_features,) 而不是 (n_features, n_classes)
+            base_values=expected_value,
+            data=original_feature_values.iloc[sample_idx],
+            feature_names=original_feature_values.columns.tolist()
+        ))
+        plt.tight_layout()
+        st.pyplot(plt.gcf())  # 直接显示，不需要保存图片
 

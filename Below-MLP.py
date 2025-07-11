@@ -112,4 +112,4 @@ if submitted:
                 st.pyplot(fig)
                 
             else:
-                raise ValueError(f"意外的SHAP值形状: {shap_values.shape}")
+                except ValueError(f"意外的SHAP值形状: {shap_values.shape}")

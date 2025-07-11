@@ -72,6 +72,14 @@ if submitted:
         # 再显示SHAP解释图
         st.subheader("SHAP Explanation")
 
+        df=pd.read_csv('Below_训练集_5变量.csv',encoding='utf8')
+        trainy=df.Below
+        x_train=df.drop('Below',axis=1)
+        from sklearn.preprocessing import StandardScaler
+        continuous_cols = ['BMI', 'WBC', 'MCH', 'TG', 'TBIL']
+        trainx = x_train.copy()
+        scaler = StandardScaler()
+        trainx[continuous_cols] = scaler.fit_transform(x_train[continuous_cols])
 
         # 创建SHAP解释器
         explainer_shap = shap.KernelExplainer(model.predict_proba, trainx)
